@@ -12,19 +12,8 @@ st.set_page_config(
 st.image("logo.png", width=200)
 st.title("SBMYO Sınav Programı Sistemi")
 st.caption("Hacettepe Üniversitesi Sosyal Bilimler Meslek Yüksekokulu")
-import streamlit as st
-import pandas as pd
-from ortools.sat.python import cp_model
-from datetime import date
 
-st.set_page_config(
-    page_title="Hacettepe Üniversitesi Sosyal Bilimler MYO Sınav Programı",
-    layout="wide"
-)
-
-st.title("Hacettepe Üniversitesi Sosyal Bilimler MYO Sınav Programı")
 st.write("Ders, tarih, salon ve gözetmen bilgilerini kullanarak otomatik sınav programı oluşturun.")
-
 GOZETMENLER = [
     "Doç. Dr. Volkan Işık",
     "Doç. Dr. Demet Çakıroğlu",
@@ -325,10 +314,6 @@ with right:
                 st.rerun()
     else:
         st.info("Henüz salon eklenmedi.")
-
-
-st.subheader("Gözetmen Listesi")
-st.dataframe(pd.DataFrame({"Gözetmen": GOZETMENLER}), use_container_width=True, height=300)
 
 st.subheader("Program Oluştur")
 
