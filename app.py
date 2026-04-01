@@ -223,17 +223,24 @@ with col4:
 
 secili_gozetmenler = st.multiselect("Gözetmenleri Seçin", GOZETMENLER)
 
-# Aynı derslik daha önce seçildiyse uyarı
+# Seçilen dersliğin daha önce hangi derslerde kullanıldığını tablo olarak göster
 secili_derslik_ad = secili_derslik.split(" - Kapasite: ")[0]
-ayni_derslikli_dersler = [
-    d["ders"] for d in st.session_state.dersler if d["derslik_ad"] == secili_derslik_ad
-]
 
-if ayni_derslikli_dersler:
-    st.warning(
-        f"Uyarı: {secili_derslik_ad} daha önce şu ders(ler) için seçildi: "
-        + ", ".join(ayni_derslikli_dersler)
-    )
+ayni_derslik_kayitlari = []
+for d in st.session_state.dersler:
+    if d["derslik_ad"] == secili_derslik_ad:
+        ayni_derslik_kayitlari.append({
+            "Ders": d["ders"],
+            "Bölüm": d["bolum"],
+            "Sınıf": d["sinif"],
+            "Derslik": d["derslik_ad"],
+            "Kapasite": d["derslik_kapasite"],
+            "Gözetmenler": ", ".join(d["gozetmenler"]),
+        })
+
+if ayni_derslik_kayitlari:
+    st.write("### Bu derslik şu derslerde kullanılıyor")
+    st.dataframe(pd.DataFrame(ayni_derslik_kayitlari), use_container_width=True, hide_index=True)
 
 if st.button("Dersi Listeye Ekle"):
     if not ders_adi.strip():
