@@ -9,7 +9,7 @@ st.set_page_config(
     layout="wide"
 )
 
-st.image("logo.png", width=700)
+st.image("logo.png", width=200)
 st.title("SBMYO Sınav Programı Sistemi")
 st.caption("Hacettepe Üniversitesi Sosyal Bilimler Meslek Yüksekokulu")
 import streamlit as st
