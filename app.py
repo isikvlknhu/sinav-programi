@@ -1,13 +1,17 @@
 import streamlit as st
+import pandas as pd
+from ortools.sat.python import cp_model
+from datetime import date
 
 st.set_page_config(
-    page_title="Hacettepe Universitesi SBMYO Sınav Sistemi",
+    page_title="SBMYO Sınav Sistemi",
+    page_icon=":material/calendar_month:",
     layout="wide"
 )
 
-st.logo("logo.png")   # sol üst uygulama logosu
-st.image("logo.png", width=500)  # sayfa içinde büyük logo
-st.title("Hacettepe Üniversitesi Sosyal Bilimler Meslek Yüksekokulu")
+st.image("logo.png", width=700)
+st.title("SBMYO Sınav Programı Sistemi")
+st.caption("Hacettepe Üniversitesi Sosyal Bilimler Meslek Yüksekokulu")
 import streamlit as st
 import pandas as pd
 from ortools.sat.python import cp_model
