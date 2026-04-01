@@ -10,7 +10,7 @@ st.set_page_config(
     layout="wide"
 )
 
-st.image("logo.png", width=200)
+st.image("logo.png", width=400)
 st.title("SBMYO Sınav Programı Sistemi")
 st.caption("Hacettepe Üniversitesi Sosyal Bilimler Meslek Yüksekokulu")
 
