@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-from ortools.sat.python import cp_model
 from datetime import date
 from io import BytesIO
 
@@ -10,11 +9,11 @@ st.set_page_config(
     layout="wide"
 )
 
-st.image("logo.png", width=400)
+st.image("logo.png", width=200)
 st.title("SBMYO Sınav Programı Sistemi")
 st.caption("Hacettepe Üniversitesi Sosyal Bilimler Meslek Yüksekokulu")
 
-st.write("Ders, tarih, derslik ve gözetmen bilgilerini kullanarak otomatik sınav programı oluşturun.")
+st.write("Ders, tarih, saat, derslik ve gözetmen bilgilerini kullanarak sınav programı oluşturun.")
 
 GOZETMENLER = [
     "Doç. Dr. Volkan Işık",
@@ -82,91 +81,43 @@ if "tarihler" not in st.session_state:
     st.session_state.tarihler = []
 
 
-def timeslot_olustur(tarihler, saatler):
-    slots = []
-    for tarih in tarihler:
-        for saat in saatler:
-            slots.append(f"{tarih} {saat}")
-    return slots
-
-
-def sinav_programi_olustur(dersler, timeslots):
-    model = cp_model.CpModel()
-
-    num_courses = len(dersler)
-    num_slots = len(timeslots)
-
-    x = {}
-    for c in range(num_courses):
-        for t in range(num_slots):
-            x[(c, t)] = model.NewBoolVar(f"x_{c}_{t}")
-
-    for c in range(num_courses):
-        model.Add(sum(x[(c, t)] for t in range(num_slots)) == 1)
-
-    # Aynı bölüm+sınıf aynı saatte olmasın
-    for t in range(num_slots):
-        for c1 in range(num_courses):
-            for c2 in range(c1 + 1, num_courses):
-                if dersler[c1]["program"] == dersler[c2]["program"]:
-                    model.Add(x[(c1, t)] + x[(c2, t)] <= 1)
-
-    # Aynı derslik aynı saatte iki sınavda olmasın
-    for t in range(num_slots):
-        for i in range(num_courses):
-            for j in range(i + 1, num_courses):
-                if dersler[i]["derslik_ad"] == dersler[j]["derslik_ad"]:
-                    model.Add(x[(i, t)] + x[(j, t)] <= 1)
-
-    # Aynı gözetmen aynı saatte iki sınavda olmasın
-    for t in range(num_slots):
-        for g in GOZETMENLER:
-            ilgili_dersler = []
-            for c in range(num_courses):
-                if g in dersler[c]["gozetmenler"]:
-                    ilgili_dersler.append(x[(c, t)])
-            if ilgili_dersler:
-                model.Add(sum(ilgili_dersler) <= 1)
-
-    model.Minimize(
-        sum(t * x[(c, t)] for c in range(num_courses) for t in range(num_slots))
-    )
-
-    solver = cp_model.CpSolver()
-    solver.parameters.max_time_in_seconds = 20
-
-    status = solver.Solve(model)
-
-    if status not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
-        return None
-
-    sonuc = []
-    for c in range(num_courses):
-        for t in range(num_slots):
-            if solver.Value(x[(c, t)]) == 1:
-                sonuc.append(
-                    {
-                        "Ders": dersler[c]["ders"],
-                        "Bölüm": dersler[c]["bolum"],
-                        "Sınıf": dersler[c]["sinif"],
-                        "Tarih-Saat": timeslots[t],
-                        "Derslik": dersler[c]["derslik_ad"],
-                        "Kapasite": dersler[c]["derslik_kapasite"],
-                        "Gözetmenler": ", ".join(dersler[c]["gozetmenler"]),
-                    }
-                )
-                break
-
-    sonuc_df = pd.DataFrame(sonuc)
-    sonuc_df = sonuc_df.sort_values(by=["Tarih-Saat", "Derslik"]).reset_index(drop=True)
-    return sonuc_df
-
-
 def excel_bytes_olustur(df):
     output = BytesIO()
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
         df.to_excel(writer, index=False, sheet_name="Sınav Programı")
     return output.getvalue()
+
+
+def cakismalari_kontrol_et(dersler):
+    hatalar = []
+
+    for i in range(len(dersler)):
+        for j in range(i + 1, len(dersler)):
+            d1 = dersler[i]
+            d2 = dersler[j]
+
+            ayni_zaman = (d1["tarih"] == d2["tarih"] and d1["saat"] == d2["saat"])
+
+            if not ayni_zaman:
+                continue
+
+            if d1["program"] == d2["program"]:
+                hatalar.append(
+                    f"{d1['ders']} ile {d2['ders']} aynı tarih-saatte ve aynı program/sınıfta."
+                )
+
+            if d1["derslik_ad"] == d2["derslik_ad"]:
+                hatalar.append(
+                    f"{d1['ders']} ile {d2['ders']} aynı tarih-saatte aynı derslikte ({d1['derslik_ad']})."
+                )
+
+            ortak_gozetmenler = set(d1["gozetmenler"]).intersection(set(d2["gozetmenler"]))
+            if ortak_gozetmenler:
+                hatalar.append(
+                    f"{d1['ders']} ile {d2['ders']} aynı tarih-saatte ortak gözetmen kullanıyor: {', '.join(sorted(ortak_gozetmenler))}."
+                )
+
+    return hatalar
 
 
 st.subheader("Sınav Tarihi Ekle")
@@ -188,7 +139,7 @@ with col_t2:
 
 if st.session_state.tarihler:
     st.write("### Girilen Tarihler")
-    st.dataframe(pd.DataFrame({"Tarih": st.session_state.tarihler}), use_container_width=True)
+    st.dataframe(pd.DataFrame({"Tarih": st.session_state.tarihler}), use_container_width=True, hide_index=True)
 
     silinecek_tarih = st.selectbox("Silinecek Tarih", st.session_state.tarihler, key="sil_tarih")
     col_sil_t1, col_sil_t2 = st.columns(2)
@@ -221,9 +172,19 @@ with col3:
 with col4:
     secili_derslik = st.selectbox("Derslik", DERSLIK_SECENEKLERI)
 
+col5, col6 = st.columns(2)
+
+with col5:
+    if st.session_state.tarihler:
+        ders_tarihi = st.selectbox("Sınav Tarihi", st.session_state.tarihler)
+    else:
+        ders_tarihi = None
+        st.info("Önce tarih ekleyin.")
+with col6:
+    ders_saati = st.selectbox("Sınav Saati", STANDART_SAATLER)
+
 secili_gozetmenler = st.multiselect("Gözetmenleri Seçin", GOZETMENLER)
 
-# Seçilen dersliğin daha önce hangi derslerde kullanıldığını tablo olarak göster
 secili_derslik_ad = secili_derslik.split(" - Kapasite: ")[0]
 
 ayni_derslik_kayitlari = []
@@ -233,18 +194,25 @@ for d in st.session_state.dersler:
             "Ders": d["ders"],
             "Bölüm": d["bolum"],
             "Sınıf": d["sinif"],
-            "Derslik": d["derslik_ad"],
-            "Kapasite": d["derslik_kapasite"],
-            "Gözetmenler": ", ".join(d["gozetmenler"]),
+            "Tarih": d["tarih"],
+            "Saat": d["saat"],
         })
 
 if ayni_derslik_kayitlari:
     st.write("### Bu derslik şu derslerde kullanılıyor")
-    st.dataframe(pd.DataFrame(ayni_derslik_kayitlari), use_container_width=True, hide_index=True)
+    st.dataframe(
+        pd.DataFrame(ayni_derslik_kayitlari),
+        use_container_width=True,
+        hide_index=True
+    )
 
 if st.button("Dersi Listeye Ekle"):
-    if not ders_adi.strip():
+    if not st.session_state.tarihler:
+        st.warning("Önce en az bir tarih ekleyin.")
+    elif not ders_adi.strip():
         st.warning("Lütfen ders adını girin.")
+    elif not ders_tarihi:
+        st.warning("Lütfen sınav tarihi seçin.")
     elif len(secili_gozetmenler) == 0:
         st.warning("Lütfen en az bir gözetmen seçin.")
     else:
@@ -259,12 +227,16 @@ if st.button("Dersi Listeye Ekle"):
                 "bolum": bolum,
                 "sinif": sinif,
                 "program": f"{bolum} {sinif}",
+                "tarih": ders_tarihi,
+                "saat": ders_saati,
                 "derslik_ad": secili_derslik_veri["ad"],
                 "derslik_kapasite": secili_derslik_veri["kapasite"],
                 "gozetmenler": secili_gozetmenler,
             }
         )
         st.success(f"{ders_adi} eklendi.")
+        st.rerun()
+
 
 st.subheader("Girilen Dersler")
 if st.session_state.dersler:
@@ -274,15 +246,17 @@ if st.session_state.dersler:
             "Ders": d["ders"],
             "Bölüm": d["bolum"],
             "Sınıf": d["sinif"],
+            "Tarih": d["tarih"],
+            "Saat": d["saat"],
             "Derslik": d["derslik_ad"],
             "Kapasite": d["derslik_kapasite"],
             "Gözetmenler": ", ".join(d["gozetmenler"]),
         })
 
-    st.dataframe(pd.DataFrame(gosterim_dersler), use_container_width=True)
+    st.dataframe(pd.DataFrame(gosterim_dersler), use_container_width=True, hide_index=True)
 
     ders_opsiyonlari = [
-        f"{i+1} - {d['ders']} / {d['bolum']} / {d['sinif']} / {d['derslik_ad']}"
+        f"{i+1} - {d['ders']} / {d['bolum']} / {d['sinif']} / {d['tarih']} {d['saat']}"
         for i, d in enumerate(st.session_state.dersler)
     ]
     secili_ders = st.selectbox("Silinecek Ders", ders_opsiyonlari, key="sil_ders")
@@ -303,24 +277,37 @@ if st.session_state.dersler:
 else:
     st.info("Henüz ders eklenmedi.")
 
+
 st.subheader("Program Oluştur")
 
-if st.button("Otomatik Sınav Programı Oluştur"):
-    if not st.session_state.tarihler:
-        st.warning("Önce en az bir tarih ekleyin.")
-    elif not st.session_state.dersler:
+if st.button("Programı Kontrol Et ve Excel Oluştur"):
+    if not st.session_state.dersler:
         st.warning("Önce en az bir ders ekleyin.")
     else:
-        TIMESLOTS = timeslot_olustur(st.session_state.tarihler, STANDART_SAATLER)
+        hatalar = cakismalari_kontrol_et(st.session_state.dersler)
 
-        program_df = sinav_programi_olustur(st.session_state.dersler, TIMESLOTS)
-
-        if program_df is None:
-            st.error("Uygun bir program oluşturulamadı. Tarih/saat veya gözetmen/derslik çakışmaları yetersiz olabilir.")
+        if hatalar:
+            st.error("Çakışmalar bulundu. Lütfen aşağıdaki sorunları düzeltin:")
+            hata_df = pd.DataFrame({"Çakışma Açıklaması": hatalar})
+            st.dataframe(hata_df, use_container_width=True, hide_index=True)
         else:
-            st.success("Sınav programı oluşturuldu.")
+            program_df = pd.DataFrame([
+                {
+                    "Ders": d["ders"],
+                    "Bölüm": d["bolum"],
+                    "Sınıf": d["sinif"],
+                    "Tarih": d["tarih"],
+                    "Saat": d["saat"],
+                    "Derslik": d["derslik_ad"],
+                    "Kapasite": d["derslik_kapasite"],
+                    "Gözetmenler": ", ".join(d["gozetmenler"]),
+                }
+                for d in st.session_state.dersler
+            ]).sort_values(by=["Tarih", "Saat", "Derslik"]).reset_index(drop=True)
+
+            st.success("Çakışma bulunmadı. Program hazır.")
             st.subheader("Oluşturulan Sınav Programı")
-            st.dataframe(program_df, use_container_width=True)
+            st.dataframe(program_df, use_container_width=True, hide_index=True)
 
             excel_data = excel_bytes_olustur(program_df)
             st.download_button(
