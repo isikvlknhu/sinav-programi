@@ -102,16 +102,26 @@ def cakismalari_kontrol_et(dersler):
             if not ayni_zaman:
                 continue
 
-            if d1["program"] == d2["program"]:
+            ayni_sinav_mi = (
+                d1["ders"] == d2["ders"]
+                and d1["bolum"] == d2["bolum"]
+                and d1["sinif"] == d2["sinif"]
+            )
+
+            # Aynı program/sınıf çakışması:
+            # Eğer aynı ders değilse hata ver.
+            if d1["program"] == d2["program"] and not ayni_sinav_mi:
                 hatalar.append(
                     f"{d1['ders']} ile {d2['ders']} aynı tarih-saatte ve aynı program/sınıfta."
                 )
 
+            # Aynı derslik aynı anda kullanılamaz
             if d1["derslik_ad"] == d2["derslik_ad"]:
                 hatalar.append(
                     f"{d1['ders']} ile {d2['ders']} aynı tarih-saatte aynı derslikte ({d1['derslik_ad']})."
                 )
 
+            # Aynı gözetmen aynı anda iki yerde olamaz
             ortak_gozetmenler = set(d1["gozetmenler"]).intersection(set(d2["gozetmenler"]))
             if ortak_gozetmenler:
                 hatalar.append(
@@ -119,7 +129,6 @@ def cakismalari_kontrol_et(dersler):
                 )
 
     return hatalar
-
 
 st.subheader("Sınav Tarihi Ekle")
 
