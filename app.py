@@ -65,6 +65,7 @@ DERSLIK_SECENEKLERI = [
 
 STANDART_SAATLER = [
     "09:00",
+    "09:30",
     "10:00",
     "11:00",
     "12:00",
