@@ -88,6 +88,9 @@ if "dersler" not in st.session_state:
 if "tarihler" not in st.session_state:
     st.session_state.tarihler = []
 
+if "duzenlenen_ders_index" not in st.session_state:
+    st.session_state.duzenlenen_ders_index = None
+
 
 def excel_bytes_olustur(df):
     output = BytesIO()
@@ -178,29 +181,76 @@ else:
 
 st.subheader("Ders Ekle")
 
+duzenlenen = st.session_state.duzenlenen_ders_index
+
+def get_value(key, default):
+    if duzenlenen is not None:
+        return st.session_state.dersler[duzenlenen][key]
+    return default
+
 col1, col2, col3, col4 = st.columns(4)
 
 with col1:
-    ders_adi = st.text_input("Ders Adı")
+    ders_adi = st.text_input("Ders Adı", value=get_value("ders", ""))
+
 with col2:
-    bolum = st.selectbox("Bölüm", BOLUMLER)
+    bolum_default = get_value("bolum", BOLUMLER[0])
+    bolum = st.selectbox(
+        "Bölüm",
+        BOLUMLER,
+        index=BOLUMLER.index(bolum_default)
+    )
+
 with col3:
-    sinif = st.selectbox("Sınıf", ["1. Sınıf", "2. Sınıf"])
+    sinif_options = ["1. Sınıf", "2. Sınıf"]
+    sinif_default = get_value("sinif", sinif_options[0])
+    sinif = st.selectbox(
+        "Sınıf",
+        sinif_options,
+        index=sinif_options.index(sinif_default)
+    )
+
 with col4:
-    secili_derslik = st.selectbox("Derslik", DERSLIK_SECENEKLERI)
+    derslik_default_ad = get_value("derslik_ad", DERSLIKLER[0]["ad"])
+    derslik_default_index = next(
+        i for i, d in enumerate(DERSLIKLER) if d["ad"] == derslik_default_ad
+    )
+    secili_derslik = st.selectbox(
+        "Derslik",
+        DERSLIK_SECENEKLERI,
+        index=derslik_default_index
+    )
 
 col5, col6 = st.columns(2)
 
 with col5:
     if st.session_state.tarihler:
-        ders_tarihi = st.selectbox("Sınav Tarihi", st.session_state.tarihler)
+        tarih_default = get_value("tarih", st.session_state.tarihler[0])
+        if tarih_default not in st.session_state.tarihler:
+            tarih_default = st.session_state.tarihler[0]
+
+        ders_tarihi = st.selectbox(
+            "Sınav Tarihi",
+            st.session_state.tarihler,
+            index=st.session_state.tarihler.index(tarih_default)
+        )
     else:
         ders_tarihi = None
         st.info("Önce tarih ekleyin.")
-with col6:
-    ders_saati = st.selectbox("Sınav Saati", STANDART_SAATLER)
 
-secili_gozetmenler = st.multiselect("Gözetmenleri Seçin", GOZETMENLER)
+with col6:
+    saat_default = get_value("saat", STANDART_SAATLER[0])
+    ders_saati = st.selectbox(
+        "Sınav Saati",
+        STANDART_SAATLER,
+        index=STANDART_SAATLER.index(saat_default)
+    )
+
+secili_gozetmenler = st.multiselect(
+    "Gözetmenleri Seçin",
+    GOZETMENLER,
+    default=get_value("gozetmenler", [])
+)
 
 secili_derslik_ad = secili_derslik.split(" - Kapasite: ")[0]
 
@@ -222,8 +272,9 @@ if ayni_derslik_kayitlari:
         use_container_width=True,
         hide_index=True
     )
+buton_text = "Dersi Listeye Ekle" if st.session_state.duzenlenen_ders_index is None else "Dersi Güncelle"
 
-if st.button("Dersi Listeye Ekle"):
+if st.button(buton_text):
     if not st.session_state.tarihler:
         st.warning("Önce en az bir tarih ekleyin.")
     elif not ders_adi.strip():
@@ -238,22 +289,27 @@ if st.button("Dersi Listeye Ekle"):
             if f"{d['ad']} - Kapasite: {d['kapasite']}" == secili_derslik
         )
 
-        st.session_state.dersler.append(
-            {
-                "ders": ders_adi.strip(),
-                "bolum": bolum,
-                "sinif": sinif,
-                "program": f"{bolum} {sinif}",
-                "tarih": ders_tarihi,
-                "saat": ders_saati,
-                "derslik_ad": secili_derslik_veri["ad"],
-                "derslik_kapasite": secili_derslik_veri["kapasite"],
-                "gozetmenler": secili_gozetmenler,
-            }
-        )
-        st.success(f"{ders_adi} eklendi.")
-        st.rerun()
+        yeni_veri = {
+            "ders": ders_adi.strip(),
+            "bolum": bolum,
+            "sinif": sinif,
+            "program": f"{bolum} {sinif}",
+            "tarih": ders_tarihi,
+            "saat": ders_saati,
+            "derslik_ad": secili_derslik_veri["ad"],
+            "derslik_kapasite": secili_derslik_veri["kapasite"],
+            "gozetmenler": secili_gozetmenler,
+        }
 
+        if st.session_state.duzenlenen_ders_index is None:
+            st.session_state.dersler.append(yeni_veri)
+            st.success(f"{ders_adi} eklendi.")
+        else:
+            st.session_state.dersler[st.session_state.duzenlenen_ders_index] = yeni_veri
+            st.success(f"{ders_adi} güncellendi.")
+            st.session_state.duzenlenen_ders_index = None
+
+        st.rerun()
 
 st.subheader("Girilen Dersler")
 if st.session_state.dersler:
@@ -277,23 +333,31 @@ if st.session_state.dersler:
         for i, d in enumerate(st.session_state.dersler)
     ]
     secili_ders = st.selectbox("Silinecek Ders", ders_opsiyonlari, key="sil_ders")
+col_d1, col_d2, col_d3 = st.columns(3)
 
-    col_d1, col_d2 = st.columns(2)
-    with col_d1:
-        if st.button("Seçili Dersi Sil"):
-            idx = ders_opsiyonlari.index(secili_ders)
-            silinen = st.session_state.dersler.pop(idx)
-            st.success(f"{silinen['ders']} silindi.")
-            st.rerun()
+with col_d1:
+    if st.button("Seçili Dersi Sil"):
+        idx = ders_opsiyonlari.index(secili_ders)
+        silinen = st.session_state.dersler.pop(idx)
+        if st.session_state.duzenlenen_ders_index == idx:
+            st.session_state.duzenlenen_ders_index = None
+        st.success(f"{silinen['ders']} silindi.")
+        st.rerun()
 
-    with col_d2:
-        if st.button("Tüm Dersleri Temizle"):
-            st.session_state.dersler = []
-            st.success("Tüm dersler temizlendi.")
-            st.rerun()
+with col_d2:
+    if st.button("Seçili Dersi Düzenle"):
+        idx = ders_opsiyonlari.index(secili_ders)
+        st.session_state.duzenlenen_ders_index = idx
+        st.rerun()
+
+with col_d3:
+    if st.button("Tüm Dersleri Temizle"):
+        st.session_state.dersler = []
+        st.session_state.duzenlenen_ders_index = None
+        st.success("Tüm dersler temizlendi.")
+        st.rerun() 
 else:
     st.info("Henüz ders eklenmedi.")
-
 
 st.subheader("Program Oluştur")
 
