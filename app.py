@@ -4,15 +4,20 @@ from datetime import date
 from io import BytesIO
 import json
 import os
-KULLANICI_ADI = "Sbmy"
-SIFRE = "sbmy2026.0"
+
 st.set_page_config(
     page_title="SBMYO Sınav Sistemi",
     page_icon=":material/calendar_month:",
     layout="wide"
 )
-if not st.session_state.giris_yapildi:
 
+KULLANICI_ADI = "Sbmy"
+SIFRE = "sbmy2026.0"
+
+if "giris_yapildi" not in st.session_state:
+    st.session_state.giris_yapildi = False
+
+if not st.session_state.giris_yapildi:
     st.title("Giriş Yap")
 
     kullanici = st.text_input("Kullanıcı Adı")
@@ -27,13 +32,8 @@ if not st.session_state.giris_yapildi:
             st.error("Kullanıcı adı veya şifre hatalı")
 
     st.stop()
-st.image("logo.png", width=400)
-col_l1, col_l2 = st.columns([6, 1])
 
-with col_l2:
-   if st.button("🔒 Çıkış Yap"):
-    st.session_state.giris_yapildi = False
-    st.rerun()
+st.image("logo.png", width=400)
 st.title("SBMYO Sınav Programı Sistemi")
 st.caption("Hacettepe Üniversitesi Sosyal Bilimler Meslek Yüksekokulu")
 
