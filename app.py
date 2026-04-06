@@ -4,14 +4,36 @@ from datetime import date
 from io import BytesIO
 import json
 import os
-
+KULLANICI_ADI = "Sbmy"
+SIFRE = "sbmy2026.0"
 st.set_page_config(
     page_title="SBMYO Sınav Sistemi",
     page_icon=":material/calendar_month:",
     layout="wide"
 )
+if not st.session_state.giris_yapildi:
 
+    st.title("Giriş Yap")
+
+    kullanici = st.text_input("Kullanıcı Adı")
+    sifre = st.text_input("Şifre", type="password")
+
+    if st.button("Giriş"):
+        if kullanici == KULLANICI_ADI and sifre == SIFRE:
+            st.session_state.giris_yapildi = True
+            st.success("Giriş başarılı")
+            st.rerun()
+        else:
+            st.error("Kullanıcı adı veya şifre hatalı")
+
+    st.stop()
 st.image("logo.png", width=400)
+col_l1, col_l2 = st.columns([6, 1])
+
+with col_l2:
+   if st.button("🔒 Çıkış Yap"):
+    st.session_state.giris_yapildi = False
+    st.rerun()
 st.title("SBMYO Sınav Programı Sistemi")
 st.caption("Hacettepe Üniversitesi Sosyal Bilimler Meslek Yüksekokulu")
 
@@ -98,7 +120,8 @@ if "tarihler" not in st.session_state:
 
 if "duzenlenen_ders_index" not in st.session_state:
     st.session_state.duzenlenen_ders_index = None
-
+if "giris_yapildi" not in st.session_state:
+    st.session_state.giris_yapildi = False
 def excel_bytes_olustur(df):
     output = BytesIO()
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
