@@ -33,9 +33,17 @@ if not st.session_state.giris_yapildi:
 
     st.stop()
 
-st.image("logo.png", width=400)
-st.title("SBMYO Sınav Programı Sistemi")
-st.caption("Hacettepe Üniversitesi Sosyal Bilimler Meslek Yüksekokulu")
+ust_sol, ust_sag = st.columns([6, 1])
+
+with ust_sol:
+    st.image("logo.png", width=400)
+    st.title("SBMYO Sınav Programı Sistemi")
+    st.caption("Hacettepe Üniversitesi Sosyal Bilimler Meslek Yüksekokulu")
+
+with ust_sag:
+    if st.button("Çıkış Yap"):
+        st.session_state.giris_yapildi = False
+        st.rerun()
 
 st.write("Ders, tarih, saat, derslik ve gözetmen bilgilerini kullanarak sınav programı oluşturun.")
 
