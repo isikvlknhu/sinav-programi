@@ -319,8 +319,11 @@ if st.button(buton_text):
             st.session_state.duzenlenen_ders_index = None
 
         st.rerun()
+
 st.subheader("Girilen Dersler")
+
 if st.session_state.dersler:
+
     gosterim_dersler = []
     for d in st.session_state.dersler:
         gosterim_dersler.append({
@@ -340,33 +343,35 @@ if st.session_state.dersler:
         f"{i+1} - {d['ders']} / {d['bolum']} / {d['sinif']} / {d['tarih']} {d['saat']}"
         for i, d in enumerate(st.session_state.dersler)
     ]
+
     secili_ders = st.selectbox("Silinecek Ders", ders_opsiyonlari, key="sil_ders")
 
-col_d1, col_d2, col_d3 = st.columns(3)
+    col_d1, col_d2, col_d3 = st.columns(3)
 
-with col_d1:
-    if st.button("Seçili Dersi Sil"):
-        idx = ders_opsiyonlari.index(secili_ders)
-        silinen = st.session_state.dersler.pop(idx)
-        if st.session_state.duzenlenen_ders_index == idx:
+    with col_d1:
+        if st.button("Seçili Dersi Sil"):
+            idx = ders_opsiyonlari.index(secili_ders)
+            silinen = st.session_state.dersler.pop(idx)
+            if st.session_state.duzenlenen_ders_index == idx:
+                st.session_state.duzenlenen_ders_index = None
+            kaydet_json()
+            st.success(f"{silinen['ders']} silindi.")
+            st.rerun()
+
+    with col_d2:
+        if st.button("Seçili Dersi Düzenle"):
+            idx = ders_opsiyonlari.index(secili_ders)
+            st.session_state.duzenlenen_ders_index = idx
+            st.rerun()
+
+    with col_d3:
+        if st.button("Tüm Dersleri Temizle"):
+            st.session_state.dersler = []
             st.session_state.duzenlenen_ders_index = None
-        kaydet_json()
-        st.success(f"{silinen['ders']} silindi.")
-        st.rerun()
+            kaydet_json()
+            st.success("Tüm dersler temizlendi.")
+            st.rerun()
 
-with col_d2:
-    if st.button("Seçili Dersi Düzenle"):
-        idx = ders_opsiyonlari.index(secili_ders)
-        st.session_state.duzenlenen_ders_index = idx
-        st.rerun()
-
-with col_d3:
-    if st.button("Tüm Dersleri Temizle"):
-        st.session_state.dersler = []
-        st.session_state.duzenlenen_ders_index = None
-        kaydet_json()
-        st.success("Tüm dersler temizlendi.")
-        st.rerun()
 else:
     st.info("Henüz ders eklenmedi.")
 st.subheader("Veri Kaydet")
