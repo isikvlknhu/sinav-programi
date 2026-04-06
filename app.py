@@ -84,19 +84,20 @@ STANDART_SAATLER = [
     "16:30",
 ]
 
+DOSYA_ADI = "kayitlar.json"
+
 if "dersler" not in st.session_state:
-    st.session_state.dersler = []
+    if os.path.exists(DOSYA_ADI):
+        with open(DOSYA_ADI, "r", encoding="utf-8") as f:
+            st.session_state.dersler = json.load(f)
+    else:
+        st.session_state.dersler = []
 
 if "tarihler" not in st.session_state:
     st.session_state.tarihler = []
 
 if "duzenlenen_ders_index" not in st.session_state:
     st.session_state.duzenlenen_ders_index = None
-DOSYA_ADI = "kayitlar.json"
-
-if os.path.exists(DOSYA_ADI):
-    with open(DOSYA_ADI, "r", encoding="utf-8") as f:
-        st.session_state.dersler = json.load(f)
 
 def excel_bytes_olustur(df):
     output = BytesIO()
@@ -358,12 +359,13 @@ if st.session_state.dersler:
             st.session_state.duzenlenen_ders_index = idx
             st.rerun()
 
-    with col_d3:
-        if st.button("Tüm Dersleri Temizle"):
-            st.session_state.dersler = []
-            st.session_state.duzenlenen_ders_index = None
-            st.success("Tüm dersler temizlendi.")
-            st.rerun()
+ with col_d3:
+    if st.button("Tüm Dersleri Temizle"):
+        st.session_state.dersler = []
+        st.session_state.duzenlenen_ders_index = None
+        kaydet_json()
+        st.success("Tüm dersler temizlendi.")
+        st.rerun()
 else:
     st.info("Henüz ders eklenmedi.")
 st.subheader("Veri Kaydet")
