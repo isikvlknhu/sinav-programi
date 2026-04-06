@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 from datetime import date
 from io import BytesIO
+import json
+import os
 
 st.set_page_config(
     page_title="SBMYO Sınav Sistemi",
@@ -90,14 +92,20 @@ if "tarihler" not in st.session_state:
 
 if "duzenlenen_ders_index" not in st.session_state:
     st.session_state.duzenlenen_ders_index = None
+DOSYA_ADI = "kayitlar.json"
 
+if os.path.exists(DOSYA_ADI):
+    with open(DOSYA_ADI, "r", encoding="utf-8") as f:
+        st.session_state.dersler = json.load(f)
 
 def excel_bytes_olustur(df):
     output = BytesIO()
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
         df.to_excel(writer, index=False, sheet_name="Sınav Programı")
     return output.getvalue()
-
+def kaydet_json():
+    with open(DOSYA_ADI, "w", encoding="utf-8") as f:
+        json.dump(st.session_state.dersler, f, ensure_ascii=False, indent=2)
 
 def cakismalari_kontrol_et(dersler):
     hatalar = []
@@ -358,7 +366,11 @@ if st.session_state.dersler:
             st.rerun()
 else:
     st.info("Henüz ders eklenmedi.")
+st.subheader("Veri Kaydet")
 
+if st.button("Kaydet"):
+    kaydet_json()
+    st.success("Veriler kaydedildi.")
 
 st.subheader("Program Oluştur")
 
